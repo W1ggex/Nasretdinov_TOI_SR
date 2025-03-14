@@ -282,12 +282,12 @@ struct CallbackData {  //allows to link the tree with the functions
     void (*callback)(const Timber&);
 };
 
+//task 3 strutures
 struct TimberNode {
     Timber data;
     TimberNode* next;
 };
 
-//task 3 struture
 struct TimberList {
     TimberNode* head;
 };
@@ -616,10 +616,10 @@ const Timber tree_return_by_index(const TreeController& treeController, int inde
 
 //TASK 3 FUNCTIONS
 void list_destroy(TimberList& list) {
-    TimberNode* curr = list.head;
-    while (curr) {
-        TimberNode* temp = curr;
-        curr = curr->next;
+    TimberNode* current = list.head;
+    while (current) {
+        TimberNode* temp = current;
+        current = current->next;
         delete temp;
     }
     list.head = nullptr;
