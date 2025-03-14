@@ -451,6 +451,14 @@ void init_tree_indexator(TreeIndexator& index) {
     index.root = nullptr;
 }
 
+void tree_init(TreeController& treeController, int capacity) {
+    treeController.capacity = capacity;
+    treeController.size = 0;
+    treeController.stock = new Timber[capacity];
+    init_tree_indexator(treeController.product_type_indexator);
+    init_tree_indexator(treeController.wood_type_indexator);
+}
+
 void destroy_tree_indexator_helper(TreeNode* node) {
     if (node == nullptr) return;
     destroy_tree_indexator_helper(node->left);
@@ -508,14 +516,6 @@ void tree_indexator_bypass(const TreeNode* node, void (*callback)(const string&,
 
 void tree_indexator_bypass_caller(const TreeIndexator& index, void (*callback)(const string&, int, void*), void* userdata) {
     tree_indexator_bypass(index.root, callback, userdata);
-}
-
-void tree_init(TreeController& treeController, int capacity) {
-    treeController.capacity = capacity;
-    treeController.size = 0;
-    treeController.stock = new Timber[capacity];
-    init_tree_indexator(treeController.product_type_indexator);
-    init_tree_indexator(treeController.wood_type_indexator);
 }
 
 void tree_destroy(TreeController& treeController) {
