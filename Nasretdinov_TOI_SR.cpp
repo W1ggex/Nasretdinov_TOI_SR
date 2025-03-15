@@ -441,9 +441,73 @@ bool array_edit(ArrayController& arrayController, int position, Timber item) {
     return true;
 }
 
+void fill_array(ArrayController& arrayController) {
+    Timber* stock = new Timber[6]();
+    stock[0] = { "pi10", 25, 100, 6000, "Plank", "Coniferous", 18300, -1, "Gari"};
+    stock[1] ={ "l15sq", 150, 150, 6000, "Log", "Pine", 18300, -1, "Bobki" };
+    stock[2] = { "sl50sq", 50, 50, 3000, "Small log", "Spruce", 12000, -1, "Bobki" };
+    stock[3] = { "dp22sq", 22, 22, 1300, "Dowel", "Birch", 47610, -1, "Gari" };
+    stock[4] = {"fp", 36, 136, 3000, "Floor plank", "Larch", 16340, -1, "Dobryanka"};
+    stock[5] = { "os", 12, 1250, 2500, "OSB-3 Board", "Sawdust", 25867, -1, "Bobki" };
+    
+    for (int i = 0; i < 6; i++) array_append(arrayController, stock[i]);
+}
+
+void array_delete_the_search(ArrayController& arrayController, int (*searchFunc)(ArrayController&)) {
+    int index = searchFunc(arrayController);
+    if (index == -1) cout << "Not found\n";
+    else {
+        array_remove_position(arrayController, index);
+        cout << "Timber was successfully deleted\n";
+    }
+}
+
+void array_edit_by_search(ArrayController& arrayController, int (*searchFunc)(ArrayController&)) {
+    int index = searchFunc(arrayController);
+    if (index == -1) cout << "Not found\n";
+    else {
+        Timber item = Timber("Input timber properties");
+        bool isEdited = array_edit(arrayController, index, item);
+        if (isEdited)
+            cout << "The array was updated\n";
+        else
+            cout << "Record cannot be updated.\nProduct and wood types must be unique\n";
+    }
+}
+
+void array_add_timber(ArrayController& arrayController) {
+    Timber item = Timber("Input timber properties");
+    bool isAdded = array_append(arrayController, item);
+    if (isAdded)
+        cout << "Timber was added\n";
+    else
+        cout << "Record cannot be added.\nProduct and wood types must be unique\n";
+}
+
+int array_search_wood_type(ArrayController& arrayController) {
+    string value;
+    cout << "Enter the wood type: ";
+    cin >> value;
+    return array_find_by_wood_type(arrayController, value);
+}
+
+int array_search_product_type(ArrayController& arrayController) {
+    string value;
+    cout << "Enter the product type: ";
+    cin >> value;
+    return array_find_by_product_type(arrayController, value);
+}
+
 Timber array_return_by_index(const ArrayController& arrayController, int position) {
     return arrayController.stock[position];
 }
+
+void array_search_print(ArrayController& arrayController, int (*searchFunc)(ArrayController&)) {
+    int index = searchFunc(arrayController);
+    if (index == -1) cout << "Not found\n";
+    else print_timber_info(array_return_by_index(arrayController, index));
+}
+
 
 
 //TASK 2 FUNCTIONS
@@ -471,19 +535,25 @@ void destroy_tree_indexator(TreeIndexator& index) {
     index.root = nullptr;
 }
 
-void tree_indexator_add(TreeIndexator& index, const string& str, int indexator) {
+void tree_destroy(TreeController& treeController) {
+    delete[] treeController.stock;
+    destroy_tree_indexator(treeController.product_type_indexator);
+    destroy_tree_indexator(treeController.wood_type_indexator);
+}
+
+void tree_indexator_add(TreeIndexator& indexator, const string& str, int index) {
     TreeNode* newNode = new TreeNode;
     newNode->str = str;
-    newNode->index = indexator;
+    newNode->index = index;
     newNode->left = nullptr;
     newNode->right = nullptr;
 
-    if (index.root == nullptr) {
-        index.root = newNode;
+    if (indexator.root == nullptr) {
+        indexator.root = newNode;
         return;
     }
 
-    TreeNode* current = index.root;
+    TreeNode* current = indexator.root;
     while (true) {
         if (str < current->str) {
             if (current->left == nullptr) {
@@ -516,12 +586,6 @@ void tree_indexator_bypass(const TreeNode* node, void (*callback)(const string&,
 
 void tree_indexator_bypass_caller(const TreeIndexator& index, void (*callback)(const string&, int, void*), void* userdata) {
     tree_indexator_bypass(index.root, callback, userdata);
-}
-
-void tree_destroy(TreeController& treeController) {
-    delete[] treeController.stock;
-    destroy_tree_indexator(treeController.product_type_indexator);
-    destroy_tree_indexator(treeController.wood_type_indexator);
 }
 
 void index_bypass(const string& str, int index, void* userData) {
@@ -567,11 +631,11 @@ int tree_indexator_find_iterative(const TreeIndexator& index, const string& str)
     return -1;
 }
 
-int tree_indexator_find_recursive(const TreeNode* node, const string& str) {
-    if (node == nullptr) return -1;
-    if (str == node->str) return node->index;
-    if (str < node->str) return tree_indexator_find_recursive(node->left, str);
-    return tree_indexator_find_recursive(node->right, str);
+int tree_indexator_find_recursive(const TreeNode* current_node, const string& str) {
+    if (current_node == nullptr) return -1;
+    if (str == current_node->str) return current_node->index;
+    if (str < current_node->str) return tree_indexator_find_recursive(current_node->left, str);
+    return tree_indexator_find_recursive(current_node->right, str);
 }
 
 int tree_indexator_find_recursive_caller(const TreeIndexator& index, const string& str) {
@@ -586,9 +650,19 @@ int tree_find_by_wood_type(const TreeController& treeController, const string& w
     return tree_indexator_find_recursive_caller(treeController.wood_type_indexator, wood_type);
 }
 
-bool tree_append(TreeController& treeController, Timber stock) {
-    if (tree_find_by_product_type(treeController, stock.product_type) != -1 ||
-        tree_find_by_wood_type(treeController, stock.wood_type) != -1) {
+int tree_search_by_wood_type(const TreeController& tree) {
+    string value = get_string("Enter the wood type");
+    return tree_find_by_wood_type(tree, value);
+}
+
+int tree_search_by_product_type(const TreeController& tree) {
+    string value = get_string("Enter the product type");
+    return tree_find_by_product_type(tree, value);
+}
+
+bool tree_append(TreeController& treeController, Timber newItem) {
+    if (tree_find_by_product_type(treeController, newItem.product_type) != -1 ||
+        tree_find_by_wood_type(treeController, newItem.wood_type) != -1) {
         return false;
     }
     if (treeController.size >= treeController.capacity) {
@@ -602,9 +676,9 @@ bool tree_append(TreeController& treeController, Timber stock) {
         treeController.capacity = newCapacity;
     }
 
-    treeController.stock[treeController.size] = stock;
-    tree_indexator_add(treeController.product_type_indexator, stock.product_type, treeController.size);
-    tree_indexator_add(treeController.wood_type_indexator, stock.wood_type, treeController.size);
+    treeController.stock[treeController.size] = newItem;
+    tree_indexator_add(treeController.product_type_indexator, newItem.product_type, treeController.size);
+    tree_indexator_add(treeController.wood_type_indexator, newItem.wood_type, treeController.size);
     treeController.size++;
     return true;
 }
@@ -613,60 +687,7 @@ const Timber tree_return_by_index(const TreeController& treeController, int inde
     return treeController.stock[indexator];
 }
 
-
-//TASK 3 FUNCTIONS
-void list_destroy(TimberList& list) {
-    TimberNode* current = list.head;
-    while (current) {
-        TimberNode* temp = current;
-        current = current->next;
-        delete temp;
-    }
-    list.head = nullptr;
-}
-
-void list_init(TimberList& list) {
-    list.head = nullptr;
-}
-
-void array_search_print(ArrayController& arrayController, int (*searchFunc)(ArrayController&)) {
-    int index = searchFunc(arrayController);
-    if (index == -1) cout << "Not found\n";
-    else print_timber_info(array_return_by_index(arrayController, index));
-}
-
-void array_delete_the_search(ArrayController& arrayController, int (*searchFunc)(ArrayController&)) {
-    int index = searchFunc(arrayController);
-    if (index == -1) cout << "Not found\n";
-    else {
-        array_remove_position(arrayController, index);
-        cout << "Timber was successfully deleted\n";
-    }
-}
-
-void array_edit_by_search(ArrayController& arrayController, int (*searchFunc)(ArrayController&)) {
-    int index = searchFunc(arrayController);
-    if (index == -1) cout << "Not found\n";
-    else {
-        Timber item = Timber("Input timber properties");
-        bool isEdited = array_edit(arrayController, index, item);
-        if (isEdited)
-            cout << "The array was updated\n";
-        else
-            cout << "Record cannot be updated.\nProduct and wood types must be unique\n";
-    }
-}
-
-void array_add_timber(ArrayController& arrayController) {
-    Timber item = Timber("Input timber properties");
-    bool isAdded = array_append(arrayController, item);
-    if (isAdded)
-        cout << "Timber was added\n";
-    else
-        cout << "Record cannot be added.\nProduct and wood types must be unique\n";
-}
-
-void fill_array(ArrayController& arrayController) {
+void fill_tree(TreeController& tree) {
     Timber* stock = new Timber[6]();
     stock[0] = { "pi10", 25, 100, 6000, "Plank", "Coniferous", 18300, -1, "Gari"};
     stock[1] ={ "l15sq", 150, 150, 6000, "Log", "Pine", 18300, -1, "Bobki" };
@@ -675,12 +696,8 @@ void fill_array(ArrayController& arrayController) {
     stock[4] = {"fp", 36, 136, 3000, "Floor plank", "Larch", 16340, -1, "Dobryanka"};
     stock[5] = { "os", 12, 1250, 2500, "OSB-3 Board", "Sawdust", 25867, -1, "Bobki" };
     
-    for (int i = 0; i < 6; i++) array_append(arrayController, stock[i]);
-}
-
-void list_print(const TimberList& list) {
-    for (TimberNode* ptr = list.head; ptr != nullptr; ptr = ptr->next) {
-        print_timber_info(ptr->data);
+    for (int i = 0; i < 6; ++i) {
+        tree_append(tree, stock[i]);
     }
 }
 
@@ -712,17 +729,25 @@ void tree_add_timber(TreeController& tree) {
         cout << "Record cannot be added.\nProduct and wood types must be unique\n";
 }
 
-void fill_tree(TreeController& tree) {
-    Timber* stock = new Timber[6]();
-    stock[0] = { "pi10", 25, 100, 6000, "Plank", "Coniferous", 18300, -1, "Gari"};
-    stock[1] ={ "l15sq", 150, 150, 6000, "Log", "Pine", 18300, -1, "Bobki" };
-    stock[2] = { "sl50sq", 50, 50, 3000, "Small log", "Spruce", 12000, -1, "Bobki" };
-    stock[3] = { "dp22sq", 22, 22, 1300, "Dowel", "Birch", 47610, -1, "Gari" };
-    stock[4] = {"fp", 36, 136, 3000, "Floor plank", "Larch", 16340, -1, "Dobryanka"};
-    stock[5] = { "os", 12, 1250, 2500, "OSB-3 Board", "Sawdust", 25867, -1, "Bobki" };
-    
-    for (int i = 0; i < 6; ++i) {
-        tree_append(tree, stock[i]);
+
+//TASK 3 FUNCTIONS
+void list_destroy(TimberList& list) {
+    TimberNode* current = list.head;
+    while (current) {
+        TimberNode* temp = current;
+        current = current->next;
+        delete temp;
+    }
+    list.head = nullptr;
+}
+
+void list_init(TimberList& list) {
+    list.head = nullptr;
+}
+
+void list_print(const TimberList& list) {
+    for (TimberNode* ptr = list.head; ptr != nullptr; ptr = ptr->next) {
+        print_timber_info(ptr->data);
     }
 }
 
@@ -733,30 +758,6 @@ void list_search(const TimberList& list, const Timber* (*searchFn)(const TimberL
         return;
     }
     print_timber_info(*item);
-}
-
-int array_search_wood_type(ArrayController& arrayController) {
-    string value;
-    cout << "Enter the wood type: ";
-    cin >> value;
-    return array_find_by_wood_type(arrayController, value);
-}
-
-int array_search_product_type(ArrayController& arrayController) {
-    string value;
-    cout << "Enter the product type: ";
-    cin >> value;
-    return array_find_by_product_type(arrayController, value);
-}
-
-int tree_search_by_wood_type(const TreeController& tree) {
-    string value = get_string("Enter the wood type");
-    return tree_find_by_wood_type(tree, value);
-}
-
-int tree_search_by_product_type(const TreeController& tree) {
-    string value = get_string("Enter the product type");
-    return tree_find_by_product_type(tree, value);
 }
 
 bool list_remove_by_product_type(TimberList *list, const string& product_type) {
